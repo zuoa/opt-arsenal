@@ -286,6 +286,156 @@ interface Result {
   warnings: string[]
 }
 
+// ─── Export Quotation ──────────────────────────────────────────────
+function exportQuotation(form: FormState, result: Result) {
+  const v = (key: keyof FormState) => parseFloat(form[key]) || 0
+  const now = new Date()
+  const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  const quoteNo = `QT-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`
+
+  const breakdownRows = [
+    ['硬件 BOM + 制造', fmt(result.breakdown.hw_cost)],
+    ['包装 & 物流', fmt(result.breakdown.logistics)],
+    ['认证 & 合规摊销', fmt(result.breakdown.cert)],
+    ['保修 & 售后', fmt(result.breakdown.warranty)],
+    ['云服务成本/年', fmt(result.breakdown.cloud_cost)],
+    ['研发成本摊销/件', fmt(result.breakdown.rd_amort)],
+    ['市场费用/件', fmt(result.breakdown.market_cost)],
+    ['实施费用/件', fmt(result.breakdown.implement_cost)],
+  ]
+
+  const channelRows: string[][] = [
+    ['出厂价（建议渠道价）', fmt(result.channel.factory)],
+  ]
+  if (result.channel.level === 2) {
+    channelRows.push(['一级代理成本', fmt(result.channel.d1_cost)])
+    channelRows.push(['一级代理售价 → 二级', fmt(result.channel.d1_sell)])
+  }
+  channelRows.push(['二级代理/零售商进货价', fmt(result.channel.d2_cost)])
+  channelRows.push(['建议零售价（RRP）', fmt(result.channel.retail)])
+
+  const html = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>报价单 ${quoteNo}</title>
+<style>
+  @page { size: A4; margin: 20mm 18mm; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif; font-size: 13px; color: #1a1a1a; line-height: 1.6; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 20px; border-bottom: 3px solid #2563eb; }
+  .header h1 { font-size: 22px; font-weight: 600; color: #2563eb; letter-spacing: -0.02em; }
+  .header .meta { text-align: right; font-size: 12px; color: #666; }
+  .header .meta p { margin-bottom: 2px; }
+  .section { margin-top: 24px; }
+  .section-title { font-size: 14px; font-weight: 600; color: #2563eb; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb; margin-bottom: 12px; }
+  table { width: 100%; border-collapse: collapse; }
+  td { padding: 7px 8px; border-bottom: 1px solid #f0f0f0; }
+  td:last-child { text-align: right; font-weight: 500; font-variant-numeric: tabular-nums; }
+  .metrics { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 16px; }
+  .metric { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 14px 16px; text-align: center; }
+  .metric .label { font-size: 11px; color: #64748b; margin-bottom: 4px; }
+  .metric .value { font-size: 20px; font-weight: 600; color: #1e293b; }
+  .metric .sub { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+  .highlight { background: #eff6ff; border-color: #bfdbfe; }
+  .highlight .value { color: #2563eb; }
+  .summary-row td { font-weight: 600; border-bottom: 2px solid #2563eb; padding-top: 10px; }
+  .warning { background: #fffbeb; border: 1px solid #fbbf24; border-radius: 6px; padding: 10px 14px; margin-top: 20px; font-size: 12px; color: #92400e; }
+  .footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid #e5e7eb; font-size: 11px; color: #94a3b8; text-align: center; }
+  .params-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 24px; }
+  .params-grid td { border: none; padding: 3px 0; font-size: 12px; }
+  .params-grid td:first-child { color: #64748b; }
+  .params-grid td:last-child { text-align: left; font-weight: 400; }
+  @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+</style>
+</head>
+<body>
+  <div class="header">
+    <h1>产品报价单</h1>
+    <div class="meta">
+      <p>报价单号：${quoteNo}</p>
+      <p>日期：${dateStr}</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">核算结果</div>
+    <div class="metrics">
+      <div class="metric">
+        <div class="label">单件综合成本</div>
+        <div class="value">${fmt(result.total_cost)}</div>
+        <div class="sub">含研发摊销 + 市场 + 实施</div>
+      </div>
+      <div class="metric highlight">
+        <div class="label">建议渠道价（出厂价）</div>
+        <div class="value">${fmt(result.channel_price)}</div>
+        <div class="sub">含运营费用</div>
+      </div>
+      <div class="metric">
+        <div class="label">建议零售价（含税）</div>
+        <div class="value">${fmt(result.retail_price)}</div>
+        <div class="sub">渠道加价后</div>
+      </div>
+    </div>
+    <div class="metrics">
+      <div class="metric">
+        <div class="label">云服务年费建议定价</div>
+        <div class="value">${fmt(result.saas_price)}/年</div>
+        <div class="sub">毛利率 ${pct(result.saas_margin)}</div>
+      </div>
+      <div class="metric">
+        <div class="label">首年综合毛利率</div>
+        <div class="value">${pct(result.gross_margin)}</div>
+        <div class="sub">${result.gross_margin > 25 ? '健康' : '偏低'}</div>
+      </div>
+      <div class="metric">
+        <div class="label">研发回本出货量</div>
+        <div class="value">${result.breakeven.toLocaleString()} 件</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">成本拆解</div>
+    <table>
+      ${breakdownRows.map(([k, val]) => `<tr><td>${k}</td><td>${val}</td></tr>`).join('\n      ')}
+      <tr class="summary-row"><td>合计</td><td>${fmt(result.total_cost)}</td></tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <div class="section-title">渠道价格结构</div>
+    <table>
+      ${channelRows.map(([k, val]) => `<tr><td>${k}</td><td>${val}</td></tr>`).join('\n      ')}
+    </table>
+  </div>
+
+  <div class="section">
+    <div class="section-title">计算参数</div>
+    <table class="params-grid">
+      <tr><td>研发人力成本</td><td>${v('rd_labor') ? fmt(v('rd_labor')) : '-'}</td><td>研发物料成本</td><td>${v('rd_material') ? fmt(v('rd_material')) : '-'}</td></tr>
+      <tr><td>单件硬件成本</td><td>${v('hw_cost') ? fmt(v('hw_cost')) : '-'}</td><td>云服务成本/年</td><td>${v('cloud_cost') ? fmt(v('cloud_cost')) : '-'}</td></tr>
+      <tr><td>包装 & 物流</td><td>${v('logistics') ? fmt(v('logistics')) : '-'}</td><td>认证 & 合规</td><td>${v('cert') ? fmt(v('cert')) : '-'}</td></tr>
+      <tr><td>保修 & 售后</td><td>${v('warranty') ? fmt(v('warranty')) : '-'}</td><td>首年预估出货量</td><td>${v('volume') || '-'}</td></tr>
+      <tr><td>摊销年限</td><td>${v('amort_years') || 3} 年</td><td>年均出货量</td><td>${v('amort_volume') || '-'}</td></tr>
+      <tr><td>目标硬件毛利率</td><td>${pct(v('hw_margin'))}</td><td>目标云服务毛利率</td><td>${pct(v('sw_margin'))}</td></tr>
+      <tr><td>渠道层级</td><td>${v('channel_level') === 1 ? '一级' : '二级'}</td><td>MDF & 返点</td><td>${pct(v('mdf_rate'))}</td></tr>
+    </table>
+  </div>
+
+  ${result.warnings.length > 0 ? `<div class="warning">注意：${result.warnings.join('；')}</div>` : ''}
+
+  <div class="footer">本报价单由 Arsenal 产品售价计算器自动生成 · ${dateStr}</div>
+</body>
+</html>`
+
+  const win = window.open('', '_blank')
+  if (win) {
+    win.document.write(html)
+    win.document.close()
+  }
+}
+
 export default function PricingCalculator() {
   const [form, setForm] = useState<FormState>(defaults)
   const [result, setResult] = useState<Result | null>(null)
@@ -447,10 +597,29 @@ export default function PricingCalculator() {
         </div>
       </div>
 
-      {/* Calculate Button */}
-      <button style={css.btn} onClick={calculate} onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-tertiary)' }} onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--bg-secondary)' }}>
-        计算建议价格
-      </button>
+      {/* Calculate & Export Buttons */}
+      <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+        <button style={{ ...css.btn, flex: 1 }} onClick={calculate} onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-tertiary)' }} onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--bg-secondary)' }}>
+          计算建议价格
+        </button>
+        <button
+          style={{
+            ...css.btn,
+            flex: 0,
+            width: 130,
+            opacity: result ? 1 : 0.4,
+            cursor: result ? 'pointer' : 'not-allowed',
+            background: 'var(--bg-card)',
+            borderColor: 'var(--border-secondary)',
+          }}
+          disabled={!result}
+          onClick={() => result && exportQuotation(form, result)}
+          onMouseEnter={(e) => { if (result) e.currentTarget.style.background = 'var(--bg-tertiary)' }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--bg-card)' }}
+        >
+          导出报价单
+        </button>
+      </div>
 
       {/* Results */}
       {result && (
