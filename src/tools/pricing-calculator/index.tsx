@@ -597,35 +597,49 @@ export default function PricingCalculator() {
         </div>
       </div>
 
-      {/* Calculate & Export Buttons */}
-      <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-        <button style={{ ...css.btn, flex: 1 }} onClick={calculate} onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-tertiary)' }} onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--bg-secondary)' }}>
-          计算建议价格
-        </button>
-        <button
-          style={{
-            ...css.btn,
-            flex: 0,
-            width: 130,
-            opacity: result ? 1 : 0.4,
-            cursor: result ? 'pointer' : 'not-allowed',
-            background: 'var(--bg-card)',
-            borderColor: 'var(--border-secondary)',
-          }}
-          disabled={!result}
-          onClick={() => result && exportQuotation(form, result)}
-          onMouseEnter={(e) => { if (result) e.currentTarget.style.background = 'var(--bg-tertiary)' }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--bg-card)' }}
-        >
-          导出报价单
-        </button>
-      </div>
+      {/* Calculate Button */}
+      <button style={css.btn} onClick={calculate} onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-tertiary)' }} onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--bg-secondary)' }}>
+        计算建议价格
+      </button>
 
       {/* Results */}
       {result && (
         <>
           <div style={{ ...css.section, marginTop: 12 }}>
-            <div style={css.sectionTitle}>核算结果</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, paddingBottom: 10, borderBottom: '1px solid var(--border-tertiary)' }}>
+              <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>核算结果</div>
+              <button
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  height: 30,
+                  padding: '0 12px',
+                  border: '1px solid var(--border-primary)',
+                  borderRadius: 'var(--radius-sm)',
+                  background: 'var(--bg-card)',
+                  color: 'var(--text-secondary)',
+                  fontSize: 12,
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s',
+                }}
+                onClick={() => result && exportQuotation(form, result)}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--border-secondary)'
+                  e.currentTarget.style.color = 'var(--text-primary)'
+                  e.currentTarget.style.background = 'var(--bg-tertiary)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--border-primary)'
+                  e.currentTarget.style.color = 'var(--text-secondary)'
+                  e.currentTarget.style.background = 'var(--bg-card)'
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                导出报价单
+              </button>
+            </div>
             <div style={css.metricGrid}>
               <div style={accentBox('blue')}>
                 <div style={css.metricLabel}>单件综合成本</div>
